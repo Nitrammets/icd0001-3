@@ -163,6 +163,49 @@ public class DoubleStackTest {
       assertEquals ("expression: " + s, 5., DoubleStack.interpret (s), delta);
    }
 
+   @Test (timeout = 1000)
+   public void testSwap(){
+      String pol = "2. 5. SWAP -";
+      assertEquals("expression: " + pol, 3, DoubleStack.interpret(pol), delta);
+   }
+
+   @Test(expected = RuntimeException.class)
+   public void testSwapUnderflow(){
+      String pol = "1. SWAP";
+      DoubleStack.interpret(pol);
+   }
+
+   @Test (timeout = 1000)
+   public void testDup(){
+      String pol = "3. DUP *";
+      assertEquals("expression: " + pol, 9, DoubleStack.interpret(pol), delta);
+   }
+
+   @Test(expected = RuntimeException.class)
+   public void testDupUnderflow(){
+      String pol = "DUP";
+      DoubleStack.interpret(pol);
+   }
+
+   @Test (timeout = 1000)
+   public void testRot(){
+      String pol = "2. 5. 9. ROT - -";
+      assertEquals("expression: " + pol, -2, DoubleStack.interpret(pol), delta);
+   }
+
+   @Test(expected = RuntimeException.class)
+   public void testRotUnderflow(){
+      String pol = "1. 2. ROT";
+      DoubleStack.interpret(pol);
+   }
+
+
+   @Test (timeout = 1000)
+   public void testInterpretMultiple(){
+      String pol = "-3. -5. -7 ROT - SWAP DUP * +";
+      assertEquals("expression: " + pol, 21, DoubleStack.interpret(pol), delta);
+   }
+
    @Test (expected=RuntimeException.class)
    public void testInterpretStackbalance() {
       String s = "35. 10. -3. + / 2.";

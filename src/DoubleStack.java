@@ -3,183 +3,168 @@ import java.util.*;
 /** Stack manipulation.
  * @since 1.8
  */
-public class DoubleStack {
+public class DoubleStack implements Cloneable{
 
-   private Element last;
-
-   public static class EmptyStackException extends RuntimeException {
-
-      public EmptyStackException() {
-         super();
-      }
-
-      public EmptyStackException(String message) {
-         super(message);
-      }
-   }
-
-   private static class Element {
-      private double value;
-      private Element next;
-
-      Element(double value){
-         this.value = value;
-         next = null;
-      }
-   }
+   private LinkedList<Double> stack;
+   private static final List<String> operations = Arrays.asList("+", "-", "*", "/", "SWAP", "DUP", "ROT");
 
    public static void main (String[] argum) {
-      System.out.println(DoubleStack.interpret("2. 15. -"));
+      interpret("2 3 SWAP -");
    }
 
    DoubleStack() {
-      last = null;
+      stack = new LinkedList<>();
    }
 
    @Override
-   public DoubleStack clone() throws CloneNotSupportedException {
-      DoubleStack newStack = new DoubleStack();
-
-      if(this.last == null){
-         return newStack;
+   public Object clone() throws CloneNotSupportedException {
+      DoubleStack clone = new DoubleStack();
+      Iterator<Double> iterator = stack.descendingIterator();
+      while (iterator.hasNext()) {
+         clone.push(iterator.next());
       }
-
-      Element curr = this.last;
-      DoubleStack temporaryStack = new DoubleStack();
-
-      while(curr != null){
-         temporaryStack.push(curr.value);
-         curr = curr.next;
-      }
-
-      while(!temporaryStack.stEmpty()){
-         newStack.push(temporaryStack.pop());
-      }
-
-      return newStack;
+      return clone;
    }
 
    public boolean stEmpty() {
-      return last == null;
+      return stack.isEmpty();
    }
 
    public void push (double a) {
-      Element newElement = new Element(a);
-      newElement.next = this.last;
-      this.last = newElement;
+      stack.push(a);
    }
 
    public double pop() {
-      if(stEmpty()){
-         throw new EmptyStackException();
-      } else {
-         double value = this.last.value;
-         last = last.next;
-         return value;
+      if (stEmpty()) {
+         throw new RuntimeException("Stack is empty!");
       }
-   } // pop
+      return stack.pop();
+   }
 
    public void op(String s) {
-      if(last == null || last.next == null) throw new IllegalArgumentException("Missing elements for operation: " + s);
-
-      double first = pop();
-      double second = pop();
+      if (!operations.contains(s)) {
+         throw new RuntimeException("Invalid operation: " + s + ".");
+      } else if (stEmpty() && s.equals("DUP")) {
+         throw new RuntimeException("Not enough elements for operation DUP: " + s +" !");
+      } else if (stack.size() < 3 && Objects.equals(s, "ROT")) {
+         throw new RuntimeException("Not enough elements for operation: " + s +" !");
+      } else if (stack.size() < 2 &&
+              (Objects.equals(s, "SWAP")
+                      || Objects.equals(s, "+")
+                      || Objects.equals(s, "-")
+                      || Objects.equals(s, "/")
+                      || Objects.equals(s, "*"))) {
+         throw new RuntimeException("Not enough elements for operation: " + s +" !");
+      }
       switch (s) {
-         case "/":
-            if(first == 0) throw new ArithmeticException("Division by zero is not legal");
-            push(second / first);
+         case "+": {
+            double a = pop();
+            double b = pop();
+            push(a + b);
             break;
-         case "*":
-            push(second * first);
+         }
+         case "-": {
+            double a = pop();
+            double b = pop();
+            push(b - a);
             break;
-         case "+":
-            push(second + first);
+         }
+         case "/": {
+            double a = pop();
+            double b = pop();
+            if (a == 0) throw new RuntimeException("Illegal operation: " + s + " (division by zero: " + b + " / " + a + ").");
+            else push(b / a);
             break;
-         case "-":
-            push(second - first);
+         }
+         case "*": {
+            double a = pop();
+            double b = pop();
+            push(a * b);
             break;
-         default:
-            throw new IllegalArgumentException("Invalid operation" + s);
+         }
+         case "SWAP":{
+            double a = pop();
+            double b = pop();
+            push(a);
+            push(b);
+            break;
+         }
+         case "DUP":{
+            double top = tos();
+            push(top);
+            break;
+         }
+         case "ROT":{
+            double first = pop();
+            double second = pop();
+            double third = pop();
+            push(second);
+            push(first);
+            push(third);
+            break;
+         }
       }
    }
 
    public double tos() {
-      if(stEmpty()){
-         throw new EmptyStackException("Stack is empty");
+      if (stEmpty()) {
+         throw new RuntimeException("Stack is empty!");
       }
-      return last.value;
+      return stack.peek();
    }
 
    @Override
    public boolean equals (Object o) {
-      if(this == o) return true;
+      return hashCode() == o.hashCode();
+   }
 
-      DoubleStack comparable = (DoubleStack) o;
-
-      Element currentLast = this.last;
-      Element comparableLast = comparable.last;
-
-      while(currentLast !=null && comparableLast != null){
-         if(currentLast.value != comparableLast.value) return false;
-         currentLast = currentLast.next;
-         comparableLast = comparableLast.next;
-      }
-
-      return currentLast == null && comparableLast == null;
+   @Override
+   public int hashCode() {
+      return Objects.hash(stack);
    }
 
    @Override
    public String toString() {
       StringBuilder sb = new StringBuilder();
 
-      DoubleStack tempStack = new DoubleStack();
-      Element current = last;
-      while (current != null) {
-         tempStack.push(current.value);
-         current = current.next;
-      }
+      Iterator<Double> iterator = stack.descendingIterator();
 
-      while (!tempStack.stEmpty()) {
-         sb.append(tempStack.pop()).append(" ");
+      while (iterator.hasNext()) {
+         sb.append(iterator.next());
+         if (iterator.hasNext()) sb.append(" ,");
+         else sb.append(".");
       }
-
-      return sb.toString().trim();
+      return sb.toString();
    }
 
    public static double interpret (String pol) {
-      if (pol == null || pol.trim().isEmpty()) {
-         throw new IllegalArgumentException("Expression is missing or empty: " + pol);
-      }
+      if (pol.isEmpty()) throw new RuntimeException("No arguments entered! " + pol);
 
-      DoubleStack operandsStack = new DoubleStack();
-      String[] splitNotation = pol.trim().split("\\s+");
-      int countOperands = 0;
+      DoubleStack doubleStack = new DoubleStack();
 
-      for (String element : splitNotation) {
+      String[] array = pol.trim().split("\\s+");
+      for (String element: array) {
          try {
-            double operand = Double.parseDouble(element);
-            operandsStack.push(operand);
-            countOperands++;
+            doubleStack.push(Double.parseDouble(element));
          } catch (NumberFormatException e) {
-            if (!Arrays.asList("/", "*", "+", "-").contains(element)) {
-               throw new IllegalArgumentException("Invalid operation in expression: " + pol);
-            }
             try {
-               operandsStack.op(element);
-               countOperands--;
-            } catch (IllegalArgumentException opException) {
-               throw new IllegalArgumentException("Invalid operation or operand in expression: " + pol);
+               doubleStack.op(element);
+            } catch (RuntimeException message) {
+               throw new RuntimeException(message + " Original string: " + pol);
             }
          }
       }
 
-      if (countOperands > 1) {
-         throw new IllegalArgumentException("Too many numbers in expression: " + pol);
-      } else if (countOperands < 1) {
-         throw new IllegalArgumentException("Not enough numbers in expression: " + pol);
-      }
+      double value;
 
-      return operandsStack.tos();
+      try {
+         value = doubleStack.tos();
+      } catch (RuntimeException empty) {
+         throw new RuntimeException(empty + " Original string: " + pol);
+      }
+      if (doubleStack.stack.size() != 1) throw new RuntimeException("Too many numbers! Original string: " + pol );
+
+      return value;
    }
 
 }
